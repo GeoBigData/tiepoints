@@ -15,6 +15,5 @@ dependencies:
 - conda-forge/label/dev::rasterio=1.0a9
 - conda-forge::pandas
 - conda-forge::shapely
-- conda-forge::fiona
 - pip:
   - tqdm
