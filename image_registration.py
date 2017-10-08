@@ -32,7 +32,6 @@ def calculate_warp_matrix(source, reference, warp_mode=cv2.MOTION_TRANSLATION, n
     try:
         (cc, warp_matrix) = cv2.findTransformECC(ref_gray, src_gray, warp_matrix, warp_mode, criteria)
     except Exception, e:
-        print 'Warning: No convergence found'
         return None
 
     return warp_matrix
