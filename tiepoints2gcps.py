@@ -183,15 +183,4 @@ if __name__ == '__main__':
 
 # TODO: add ability to include a geojson to filter the search area
 # TODO: write code to use multiprocessing to solve this faster
-# TODO: TEST ON A BIG STRIP
-# TODO: Figure out how to set the crs in the gdal commands
-
-# gdal_translate -of VRT /Users/mgleason/Desktop/temp/_blm/blm_clip.tif --optfile /Users/mgleason/Desktop/temp/test/gcps.txt /Users/mgleason/Desktop/temp/test/gcps.VRT
-# gdalwarp -of GTiFF -wo NUM_THREADS=ALL_CPUS -tps -r cubic -co TILED=YES /Users/mgleason/Desktop/temp/test/gcps.VRT /Users/mgleason/Desktop/temp/test/warped.tif
-
-
-# gdal_translate -of VRT /Users/mgleason/Desktop/temp/i2i/30cm.tif --optfile /Users/mgleason/Desktop/temp/i2i/output/gcps.txt /Users/mgleason/Desktop/temp/i2i/output/gcps.VRT
-# gdalwarp -of GTiFF -wo NUM_THREADS=ALL_CPUS -tps -r cubic -co TILED=YES /Users/mgleason/Desktop/temp/i2i/output/gcps.VRT /Users/mgleason/Desktop/temp/i2i/output/warped.tif
-
-# gdal_translate -of VRT /Users/mgleason/Desktop/temp/i2i/30cm.tif --optfile /Users/mgleason/Desktop/temp/i2i/output_faster/gcps.txt /Users/mgleason/Desktop/temp/i2i/output_faster/gcps.VRT
-# gdalwarp -of GTiFF -wo NUM_THREADS=ALL_CPUS -tps -r cubic -co TILED=YES /Users/mgleason/Desktop/temp/i2i/output_faster/gcps.VRT /Users/mgleason/Desktop/temp/i2i/output_faster/warped.tif
+# for docker install, to get opencv to work: sudo apt install libgl1-mesa-glx
