@@ -199,19 +199,19 @@ if __name__ == '__main__':
     # out_dir = '/Users/mgleason/Desktop/temp/i2i/output_faster/'
 
     # these seem to be good default values
-    # grid_spacing_px = 501
-    # window_size = 501
-    # n_iter=1000
-    # term_eps=1e-4
+    grid_spacing_px = 501
+    window_size = 501
+    n_iter=1000
+    term_eps=1e-4
 
-    # use this for testing for now
-    grid_spacing_px = 251
-    window_size = 251
-    n_iter = 5000
-    term_eps=1e-10
+    # # use this for testing for now
+    # grid_spacing_px = 251
+    # window_size = 251
+    # n_iter = 5000
+    # term_eps=1e-10
     main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, n_iter=n_iter, term_eps=term_eps)
 
 
 # TODO: add ability to include a geojson to filter the search area
-# TODO: write code to use multiprocessing to solve this faster
+# TODO: write code to use multiprocessing to solve this faster -- too hard, couldn't figure it out
 # for docker install, to get opencv to work: sudo apt install libgl1-mesa-glx
