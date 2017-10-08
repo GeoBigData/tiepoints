@@ -17,3 +17,4 @@ dependencies:
 - conda-forge::shapely
 - pip:
   - tqdm
+#  - gbdxtools
