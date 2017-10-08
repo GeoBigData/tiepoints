@@ -4,6 +4,7 @@ RUN mkdir /helper
 COPY ./environment.yml /helper
 RUN conda env create -f /helper/environment.yml
 RUN apt-get -y install libgl1-mesa-glx
+RUN apt-get install libgomp1
 
 RUN mkdir /scripts
 COPY ./gbdx/run_tiepoints2gcps.py /scripts
