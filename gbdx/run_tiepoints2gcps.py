@@ -22,7 +22,10 @@ def main():
     # get the inputs
     input_folder_src = '/mnt/work/input/source'
     input_folder_ref = '/mnt/work/input/reference'
+    input_folder_aoi = '/mnt/work/input/aoi_geojson'
     string_ports = '/mnt/work/input/ports.json'
+
+    # create output directory
     out_path = '/mnt/work/output/data'
     if os.path.exists(out_path) is False:
         os.makedirs(out_path)
@@ -45,6 +48,17 @@ def main():
     src_nodata = convert_type(src_nodata, float, 'Float')
     ref_nodata = convert_type(ref_nodata, float, 'Float')
 
+    # get the input aoi geojson (if provided)
+    if os.path.exists(input_folder_aoi):
+        aoi_geojsons = glob.glob1(input_folder_aoi, '*.json') + glob.glob1(input_folder_aoi, '*.geojson')
+        if len(aoi_geojsons) == 0:
+            raise ValueError("No GeoJSONs found in input data port 'aoi_geojsons'")
+        if len(aoi_geojsons) > 1:
+            raise ValueError("Multiple GeoJSONs found in input data port 'aoi_geojsons'")
+        aoi_geojson = os.path.join(input_folder_aoi, aoi_geojsons[0])
+    else:
+        aoi_geojson = None
+
     # get the rasters in the reference folder
     ref_rasters = glob.glob1(input_folder_ref, '*.tif')
     if len(ref_rasters) == 0:
@@ -63,7 +77,7 @@ def main():
 
     # run the processing
     tiepoints2gcps.main(src_raster, ref_raster, grid_spacing_px, window_size_px, out_path, src_nodata, ref_nodata,
-                        n_iter, term_eps)
+                        aoi_geojson, n_iter, term_eps)
 
     print "Tiepoint creation completed successfully."
 
