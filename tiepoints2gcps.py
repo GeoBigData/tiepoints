@@ -13,6 +13,7 @@ from rasterio import warp
 import shapely
 import json
 import tqdm
+import fiona
 
 
 def calculate_tiepoint(src_pt, src, ref, window_size, src_nodata, ref_nodata, n_iter, term_eps):
@@ -147,10 +148,11 @@ def calculate_tiepoint(src_pt, src, ref, window_size, src_nodata, ref_nodata, n_
     return gcp, tiepoint_geojson
 
 
-def main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, src_nodata, ref_nodata,
+def main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, src_nodata, ref_nodata, aoi_geojson,
          n_iter=5000, term_eps=1e-10):
 
     with rasterio.open(src_raster, 'r') as src, rasterio.open(ref_raster, 'r') as ref:
+        
 
         # check that the CRSs of the two rasters matche
         if src.crs <> ref.crs:
@@ -181,15 +183,46 @@ def main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, src_noda
                 src_pt = geometry.Point(x, y)
                 src_pts.append(src_pt)
 
+        # if aoi_geojson was provided, build up a list of the component polygon geometries
+        aoi_geoms = []
+        if aoi_geojson is not None:
+            with fiona.open(aoi_geojson, 'r') as aois:
+
+                # check the crs matches the ref raster
+                if aois.crs <> ref.crs:
+                    err = 'AOIs GeoJSON and reference raster do not have matching Coordinate Reference Systems.'
+                    raise ValueError(err)
+
+                # get and convert the geometries
+                for feat in aois:
+                    geom_wkt = feat['geometry']
+                    if geom_wkt['type'] not in ['Polygon', 'MultiPolygon']:
+                        err = "Input aoi_geojson file contains geometries that are not Polygon or MultiPolygon."
+                        raise ValueError()
+                    feat_geom = geometry.shape(geom_wkt)
+                    aoi_geoms.append(feat_geom)
+
+
         # iterate over the pt geometries, searching for tie points
         gcps = []
         tiepoints = []
         for src_pt in tqdm.tqdm(src_pts):
-            # verify that hte point is within the bounds
+            # verify that hte point is within the source raster bounds
             in_bounds = src_pt.intersects(bounds_geom)
 
             if in_bounds is False:
                 # skip to the next point
+                continue
+
+            # verify that the point is within the aoi_geoms bounds
+            if len(aoi_geoms) == 0:
+                in_aoi_bounds = True
+            else:
+                in_aoi_bounds = False
+                for aoi_geom in aoi_geoms:
+                    in_aoi_bounds = in_aoi_bounds or src_pt.intersects(aoi_geom)
+            # if not, skip to the next point
+            if in_aoi_bounds is False:
                 continue
 
             # find tiepoint (if possible) in reference raster. return result as a gcp and as a line geometry showing
@@ -220,6 +253,7 @@ if __name__ == '__main__':
     src_raster = '/Users/mgleason/Desktop/temp/_blm/blm_clip.tif'
     ref_raster = '/Users/mgleason/Desktop/temp/50_cm/50cm_clip.tif'
     out_dir = '/Users/mgleason/Desktop/temp/test4'
+    aoi_geojson = '/Users/mgleason/Desktop/temp/50_cm/boundary_test.geojson'
     # src_raster = '/Users/mgleason/Desktop/temp/i2i/30cm.tif'
     # ref_raster = '/Users/mgleason/Desktop/temp/i2i/50cm.tif'
     # out_dir = '/Users/mgleason/Desktop/temp/i2i/output_faster/'
@@ -238,7 +272,7 @@ if __name__ == '__main__':
     # window_size = 251
     # n_iter = 5000
     # term_eps=1e-10
-    main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, src_nodata, ref_nodata,
+    main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, src_nodata, ref_nodata, aoi_geojson,
          n_iter=n_iter, term_eps=term_eps)
 
 
