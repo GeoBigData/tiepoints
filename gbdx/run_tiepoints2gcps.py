@@ -34,13 +34,16 @@ def main():
     window_size_px = inputs.get('window_size_px', '501')
     n_iter = inputs.get('n_iter', '1000')
     term_eps = inputs.get('term_eps', '1e-4')
+    src_nodata = inputs.get('src_nodata', '0')
+    ref_nodata = inputs.get('ref_nodata', '0')
 
     # convert the inputs to the correct dtypes
     grid_spacing_px = convert_type(grid_spacing_px, int, 'Integer')
     window_size_px = convert_type(window_size_px, int, 'Integer')
     n_iter = convert_type(n_iter, int, 'Integer')
     term_eps = convert_type(term_eps, float, 'Float')
-
+    src_nodata = convert_type(src_nodata, float, 'Float')
+    ref_nodata = convert_type(ref_nodata, float, 'Float')
 
     # get the rasters in the reference folder
     ref_rasters = glob.glob1(input_folder_ref, '*.tif')
@@ -59,7 +62,8 @@ def main():
     src_raster = os.path.join(input_folder_src, src_rasters[0])
 
     # run the processing
-    tiepoints2gcps.main(src_raster, ref_raster, grid_spacing_px, window_size_px, out_path, n_iter, term_eps)
+    tiepoints2gcps.main(src_raster, ref_raster, grid_spacing_px, window_size_px, out_path, src_nodata, ref_nodata,
+                        n_iter, term_eps)
 
     print "Tiepoint creation completed successfully."
 

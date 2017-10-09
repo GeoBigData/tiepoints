@@ -35,6 +35,18 @@
             "type": "string",
             "description": "The threshold used for determining convergence in solution of tiepoint calculation. Smaller decimal values may result in better tiepoints, but will always result in slower task run times. Default: 1e-4.",
             "name": "term_eps"
+        },
+        {
+            "required": false,
+            "type": "string",
+            "description": "No data value in the source raster. Default: 0.",
+            "name": "src_nodata"
+        },
+        {
+            "required": false,
+            "type": "string",
+            "description": "No data value in the reference raster. Default: 0.",
+            "name": "ref_nodata"
         }
 
     ],
@@ -54,7 +66,7 @@
         }
     }],
     "name": "calculate_tiepoints",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "WARNING: THIS TASK IS EXPERIMENTAL AND HAS NOT BEEN ROBUSTLY TESTED. Given a 'source' raster and a 'reference' raster (in the same coordinate system), this task calculates tie points between the two images, in the form of a Polyline GeoJSON file. The tiepoints are calculate based on the shift required to adjust the source reference to align with the reference raster. Tiepoints are calculated using a regular grid within the source raster, using the input specified grid spacing in pixels (grid_spacing_px). At each point, a window of size of the input specified size (window_size_px) is inspected in the source and reference rasters, and a calculation is run to determine the best X,Y translation that would align the windows between the two images. Where no solution is found, a tiepoint will not be created. Where a solution is found, the tie point is calculated according to the output X,Y translation parameters. In addition to the tiepoint geometries, the task also outputs a ground control point (GCP) text file, suitable for use in gdal_translate. This can be used to apply the tiepoints as GCPs within the source raster, and by piping the result to gdal_warp, can produce a new, shifted source raster that is more closely aligned to the reference raster. For more information about this task, please contact Mike Gleason (michael.gleason@digitalglobe.com).",
     "properties": {
         "isPublic": true,

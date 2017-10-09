@@ -15,7 +15,7 @@ import json
 import tqdm
 
 
-def calculate_tiepoint(src_pt, src, ref, window_size, n_iter, term_eps):
+def calculate_tiepoint(src_pt, src, ref, window_size, src_nodata, ref_nodata, n_iter, term_eps):
 
     x = src_pt.x
     y = src_pt.y
@@ -35,11 +35,16 @@ def calculate_tiepoint(src_pt, src, ref, window_size, n_iter, term_eps):
     bottom_pad = int(np.ceil(window_size / 2.))
 
     # set the window
-    window_col_start = np.maximum(src_col - left_pad, 0)
-    window_col_stop = np.minimum(src_col + right_pad, src.shape[1] - 1)
-    window_row_start = np.maximum(src_row - bottom_pad, 0)
-    window_row_stop = np.minimum(src_row + top_pad, src.shape[0] - 1)
+    window_col_start = src_col - left_pad
+    window_col_stop = src_col + right_pad
+    window_row_start = src_row - bottom_pad
+    window_row_stop = src_row + top_pad
     window = ((window_row_start, window_row_stop), (window_col_start, window_col_stop))
+
+    # check that the window is totally within the image bounds. if not, skip it
+    if window_col_start < 0 or window_col_stop > src.shape[1]-1 \
+            or window_row_start < 0 or window_row_stop > src.shape[0] - 1:
+        return None, None
 
     # get the window from the src raster using the window
     src_rgb = np.zeros((window_row_stop - window_row_start, window_col_stop - window_col_start, 3),
@@ -47,6 +52,14 @@ def calculate_tiepoint(src_pt, src, ref, window_size, n_iter, term_eps):
     src_rgb[:, :, 0] = src.read(1, window=window)
     src_rgb[:, :, 1] = src.read(2, window=window)
     src_rgb[:, :, 2] = src.read(3, window=window)
+
+    # check for nodata -- if any, skip
+    # this avoids calculations of tie points along boundary images, where errors can occur
+    src_band_sum = src_rgb.sum(axis=2)
+    # pct no_data
+    src_pct_nodata = np.sum(src_band_sum == src_nodata, dtype='float64')/src_band_sum.size
+    if src_pct_nodata > 0.05:
+        return None, None
 
     # convert window to a geom
     ref_window_x_min = x - (src_col - window_col_start) * pixel_size_x
@@ -61,12 +74,17 @@ def calculate_tiepoint(src_pt, src, ref, window_size, n_iter, term_eps):
     ref_window_ul_px = ref.index(*ref_window_ul_xy)
     ref_window_lr_px = ref.index(*ref_window_lr_xy)
 
-    ref_window_row_stop = np.minimum(ref_window_lr_px[0], ref.shape[0] - 1)
-    ref_window_row_start = np.maximum(ref_window_ul_px[0], 0)
-    ref_window_col_start = np.maximum(ref_window_ul_px[1], 0)
-    ref_window_col_stop = np.minimum(ref_window_lr_px[1], ref.shape[1] - 1)
+    ref_window_row_stop = ref_window_lr_px[0]
+    ref_window_row_start = ref_window_ul_px[0]
+    ref_window_col_start = ref_window_ul_px[1]
+    ref_window_col_stop = ref_window_lr_px[1]
 
     ref_window = ((ref_window_row_start, ref_window_row_stop), (ref_window_col_start, ref_window_col_stop))
+
+    # check that the window is totally within the image bounds. if not, skip it
+    if ref_window_col_start < 0 or ref_window_col_stop > ref.shape[1] - 1 \
+            or ref_window_row_start < 0 or ref_window_row_stop > ref.shape[0] - 1:
+        return None, None
 
     ref_r_raw = ref.read(1, window=ref_window)
     ref_g_raw = ref.read(2, window=ref_window)
@@ -91,6 +109,14 @@ def calculate_tiepoint(src_pt, src, ref, window_size, n_iter, term_eps):
                             src_crs=ref.crs, dst_crs=ref.crs, resample=warp.Resampling.cubic)
     rasterio.warp.reproject(ref_b_raw, ref_rgb[:, :, 2], src_transform=src_affine, dst_transform=shifted_affine,
                             src_crs=ref.crs, dst_crs=ref.crs, resample=warp.Resampling.cubic)
+
+    # check for nodata -- if any, skip
+    # this avoids calculations of tie points along boundary images, where errors can occur
+    ref_band_sum = ref_rgb.sum(axis=2)
+    # pct no_data
+    ref_pct_nodata = np.sum(ref_band_sum == ref_nodata, dtype='float64')/ref_band_sum.size
+    if ref_pct_nodata > 0.05:
+        return None, None
 
     # calculate the affine shift
     warp_matrix = image_registration.calculate_warp_matrix(src_rgb, ref_rgb,
@@ -121,14 +147,14 @@ def calculate_tiepoint(src_pt, src, ref, window_size, n_iter, term_eps):
     return gcp, tiepoint_geojson
 
 
-def main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, n_iter=5000, term_eps=1e-10):
+def main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, src_nodata, ref_nodata,
+         n_iter=5000, term_eps=1e-10):
 
     with rasterio.open(src_raster, 'r') as src, rasterio.open(ref_raster, 'r') as ref:
 
         # check that the CRSs of the two rasters matche
         if src.crs <> ref.crs:
             raise ValueError('Source and reference raster do not have matching Coordinate Reference Systems.')
-
 
         # BUILD UP LIST OF GRID POINTS IN REFERENCE RASTER TO SEARCH FOR TIEPOINTS
         # extract src raster extent to boundary
@@ -168,7 +194,7 @@ def main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, n_iter=5
 
             # find tiepoint (if possible) in reference raster. return result as a gcp and as a line geometry showing
             # the corresponding pts in the source nad reference rasters
-            gcp, tiepoint = calculate_tiepoint(src_pt, src, ref, window_size, n_iter, term_eps)
+            gcp, tiepoint = calculate_tiepoint(src_pt, src, ref, window_size, src_nodata, ref_nodata, n_iter, term_eps)
             tiepoints.append(tiepoint)
             gcps.append(gcp)
 
@@ -193,12 +219,15 @@ if __name__ == '__main__':
 
     src_raster = '/Users/mgleason/Desktop/temp/_blm/blm_clip.tif'
     ref_raster = '/Users/mgleason/Desktop/temp/50_cm/50cm_clip.tif'
-    out_dir = '/Users/mgleason/Desktop/temp/test'
+    out_dir = '/Users/mgleason/Desktop/temp/test4'
     # src_raster = '/Users/mgleason/Desktop/temp/i2i/30cm.tif'
     # ref_raster = '/Users/mgleason/Desktop/temp/i2i/50cm.tif'
     # out_dir = '/Users/mgleason/Desktop/temp/i2i/output_faster/'
 
+
     # these seem to be good default values
+    src_nodata = 0
+    ref_nodata = 0
     grid_spacing_px = 501
     window_size = 501
     n_iter=1000
@@ -209,7 +238,8 @@ if __name__ == '__main__':
     # window_size = 251
     # n_iter = 5000
     # term_eps=1e-10
-    main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, n_iter=n_iter, term_eps=term_eps)
+    main(src_raster, ref_raster, grid_spacing_px, window_size, out_dir, src_nodata, ref_nodata,
+         n_iter=n_iter, term_eps=term_eps)
 
 
 # TODO: add ability to include a geojson to filter the search area
