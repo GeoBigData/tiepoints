@@ -64,7 +64,7 @@ def main():
     if len(ref_rasters) == 0:
         raise ValueError("No tifs found in input data port 'reference'")
     if len(ref_rasters) > 1:
-        raise ValueError("Multiple shapefiles found in input data port 'reference'")
+        raise ValueError("Multiple tifs found in input data port 'reference'")
     ref_raster = os.path.join(input_folder_ref, ref_rasters[0])
 
     # get the rasters in the source folder
@@ -72,7 +72,7 @@ def main():
     if len(src_rasters) == 0:
         raise ValueError("No tifs found in input data port 'source'")
     if len(src_rasters) > 1:
-        raise ValueError("Multiple shapefiles found in input data port 'source'")
+        raise ValueError("Multiple tifs found in input data port 'source'")
     src_raster = os.path.join(input_folder_src, src_rasters[0])
 
     # run the processing
